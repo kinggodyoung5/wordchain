@@ -4,10 +4,15 @@
 
 - **싱글 모드**: 봇과 1대1 끝말잇기
 - **대결 모드**: Firebase Realtime Database로 여러 명이 실시간 동시 접속해 순서대로 진행
-- 단어 검증: 국립국어원 표준국어대사전 기반 명사 약 18만 개 (2~3글자 위주) + 상용 어휘 3천여 개
+- 단어 검증: 표준국어대사전 기반 명사 약 18만 개 (2~3글자 위주) + 상용 어휘 3천여 개
 - 비속어 필터: 리스트 기반 거부
-- 마지막 글자 비교만 사용 (두음법칙, 자모 분해 등 복잡한 처리 없음)
+- 시작 글자 비교: 기본은 마지막 글자 그대로 비교, 두음법칙(ㄴ/ㄹ 어두 변형)만 규칙 기반으로 추가 허용 — 그 외 복잡한 자모 처리는 없음
 - 완전 무료 (Firebase Spark 무료 요금제로 충분)
+
+### 데이터 출처
+
+- 단어 목록: [han-dle/pd-korean-noun-list-for-wordles](https://github.com/han-dle/pd-korean-noun-list-for-wordles) (CC0, 공개 도메인) — `AllNouns`/`CommonNouns`에서 2글자 이상 한글 명사만 추출해 `src/data/words-full.json`(검증용, ~18만), `src/data/words-common.json`(봇/시작단어용, ~3천)으로 가공했습니다.
+- 비속어 목록: [LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words](https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words) `ko` 파일 기반, 오탐 소지가 있는 일부 항목(고유 의미가 있는 일반 단어)은 제외하고 `src/data/profanity.json`으로 정리했습니다.
 
 ## 빠른 시작 (로컬에서 실행)
 
