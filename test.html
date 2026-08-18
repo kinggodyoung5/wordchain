@@ -36,9 +36,11 @@
 <h2>3. 난이도별 봇 단어 선택(pickBotWord) 직접 실험</h2>
 <p>난이도를 고르고 시작 글자를 입력하면, 그 난이도 풀에서 봇이 실제로 어떤 단어를 뽑는지 20번 반복해서 어느 출처(쉬움/보통/어려움 풀)에서 나왔는지 통계로 보여줍니다.</p>
 <select id="difficultySelect">
+  <option value="veryEasy">아주 쉬움 (빈도 상위 500개)</option>
   <option value="easy">쉬움 (빈도 상위 700개)</option>
-  <option value="normal" selected>보통 (상용 단어 3천여 개)</option>
-  <option value="hard">어려움 (전체 사전)</option>
+  <option value="normal" selected>보통 (빈도 상위 1,500개)</option>
+  <option value="hard">어려움 (빈도 상위 2,500개)</option>
+  <option value="veryHard">매우 어려움 (전체 사전)</option>
 </select>
 <input id="charInput" maxlength="1" placeholder="예: 국" />
 <button id="botBtn">봇 단어 20번 뽑기</button>
@@ -61,9 +63,11 @@ const profanitySet = await loadProfanitySet();
 
 const poolCount = (m) => [...m.values()].reduce((sum, arr) => sum + arr.length, 0);
 document.getElementById('stats').innerHTML = `
-  <div class="stat"><b>${dict.easyList.length.toLocaleString()}</b>쉬움 풀 (빈도 상위)</div>
-  <div class="stat"><b>${dict.commonList.length.toLocaleString()}</b>보통 풀 (상용 단어)</div>
-  <div class="stat"><b>${dict.fullSet.size.toLocaleString()}</b>어려움 풀 / 전체 검증 사전</div>
+  <div class="stat"><b>${poolCount(dict.difficultyPools.veryEasy).toLocaleString()}</b>아주 쉬움</div>
+  <div class="stat"><b>${poolCount(dict.difficultyPools.easy).toLocaleString()}</b>쉬움</div>
+  <div class="stat"><b>${poolCount(dict.difficultyPools.normal).toLocaleString()}</b>보통</div>
+  <div class="stat"><b>${poolCount(dict.difficultyPools.hard).toLocaleString()}</b>어려움</div>
+  <div class="stat"><b>${dict.fullSet.size.toLocaleString()}</b>매우 어려움 / 전체 검증 사전</div>
   <div class="stat"><b>${profanitySet.size}</b>비속어 필터 항목</div>
 `;
 
@@ -118,9 +122,16 @@ for (const c of cases) {
 document.getElementById('validateSummary').textContent = `${pass} / ${cases.length} 통과`;
 
 function sourceOfWord(word) {
-  if (dict.difficultyPools.easy.get(word[0])?.includes(word)) return '쉬움(빈도 상위 700)';
-  if (dict.difficultyPools.normal.get(word[0])?.includes(word)) return '보통(상용 3천여)';
-  return '어려움(전체 사전)';
+  const order = [
+    ['아주쉬움(500)', dict.difficultyPools.veryEasy],
+    ['쉬움(700)', dict.difficultyPools.easy],
+    ['보통(1500)', dict.difficultyPools.normal],
+    ['어려움(2500)', dict.difficultyPools.hard],
+  ];
+  for (const [label, pool] of order) {
+    if (pool.get(word[0])?.includes(word)) return label;
+  }
+  return '매우어려움(전체)';
 }
 
 document.getElementById('botBtn').addEventListener('click', () => {

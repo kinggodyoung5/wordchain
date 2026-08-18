@@ -21,33 +21,40 @@ function buildFirstCharIndex(words) {
 }
 
 /**
- * 난이도별 봇 단어 출제 범위(pool).
- *  - easy:   words-easy.json (700개) — 국립국어원 "한국어 학습용 어휘"(2004)에서
- *            고유명사를 제외하고 실제 사용빈도 순으로 추린 상위 700개 명사.
- *            (부록:자주 쓰이는 한국어 낱말 5800, 한국어 위키낱말사전 기반 빈도 순위)
- *  - normal: words-common.json (3,036개) — 위 학습용 어휘 전체(고유명사 제거).
- *  - hard:   words-full.json (전체 사전, ~18만개).
- * easy/normal은 실제 빈도 데이터 + 고유명사 제거를 거쳤고, hard는 표준국어대사전
- * 명사 전체라 고유명사가 일부 섞여 있을 수 있다(예: 잘 알려지지 않은 지명/인명).
+ * 난이도별 봇 단어 출제 범위(pool). 전부 같은 사용빈도 순위(국립국어원 "한국어
+ * 학습용 어휘" 2004 + 한국어 위키낱말사전 "자주 쓰이는 한국어 낱말 5800"의
+ * 고유명사 제거된 순위)에서 상위 N개를 자른 것이라 난이도가 오를수록
+ * 이전 난이도를 그대로 포함한다.
+ *  - veryEasy: 상위 500개 (words-veryeasy.json)
+ *  - easy:     상위 700개 (words-easy.json)
+ *  - normal:   상위 1,500개 (words-normal.json)
+ *  - hard:     상위 2,500개 (words-hard.json)
+ *  - veryHard: 전체 사전 (words-full.json, ~18만개) — 순위 밖 단어라
+ *              고유명사가 일부 섞여 있을 수 있음 (아직 전체 정리는 못함).
  */
-function buildDifficultyPools(easyList, normalList, fullSet) {
+function buildDifficultyPools({ veryEasy, easy, normal, hard, fullSet }) {
   return {
-    easy: buildFirstCharIndex(easyList),
-    normal: buildFirstCharIndex(normalList),
-    hard: buildFirstCharIndex([...fullSet]),
+    veryEasy: buildFirstCharIndex(veryEasy),
+    easy: buildFirstCharIndex(easy),
+    normal: buildFirstCharIndex(normal),
+    hard: buildFirstCharIndex(hard),
+    veryHard: buildFirstCharIndex([...fullSet]),
   };
 }
 
 /**
- * @returns {Promise<{fullSet: Set<string>, commonList: string[], easyList: string[], commonByFirstChar: Map<string,string[]>, fullByFirstChar: Map<string,string[]>, difficultyPools: {easy: Map, normal: Map, hard: Map}}>}
+ * @returns {Promise<{fullSet: Set<string>, commonList: string[], easyList: string[], commonByFirstChar: Map<string,string[]>, fullByFirstChar: Map<string,string[]>, difficultyPools: {veryEasy: Map, easy: Map, normal: Map, hard: Map, veryHard: Map}}>}
  */
 export function loadDictionary() {
   if (!dictionaryPromise) {
     dictionaryPromise = (async () => {
-      const [common, full, easy] = await Promise.all([
+      const [common, full, veryEasy, easy, normal, hard] = await Promise.all([
         fetchJson('./src/data/words-common.json'),
         fetchJson('./src/data/words-full.json'),
+        fetchJson('./src/data/words-veryeasy.json'),
         fetchJson('./src/data/words-easy.json'),
+        fetchJson('./src/data/words-normal.json'),
+        fetchJson('./src/data/words-hard.json'),
       ]);
       const fullSet = new Set(full);
       for (const w of common) fullSet.add(w);
@@ -57,7 +64,7 @@ export function loadDictionary() {
         easyList: easy,
         commonByFirstChar: buildFirstCharIndex(common),
         fullByFirstChar: buildFirstCharIndex(full),
-        difficultyPools: buildDifficultyPools(easy, common, fullSet),
+        difficultyPools: buildDifficultyPools({ veryEasy, easy, normal, hard, fullSet }),
       };
     })();
   }

@@ -59,25 +59,29 @@ export function pickStartWord(commonList, usedWords = new Set()) {
 }
 
 export const Difficulty = {
+  VERY_EASY: 'veryEasy',
   EASY: 'easy',
   NORMAL: 'normal',
   HARD: 'hard',
+  VERY_HARD: 'veryHard',
 };
+
+const DIFFICULTY_ORDER = [
+  Difficulty.VERY_EASY,
+  Difficulty.EASY,
+  Difficulty.NORMAL,
+  Difficulty.HARD,
+  Difficulty.VERY_HARD,
+];
 
 /**
  * 난이도별로 봇이 뽑을 단어 풀(Map<시작글자, 단어[]>)을 우선순위대로 나열한다.
- * 지정한 난이도 풀에 마땅한 단어가 없을 때만(드문 시작 글자 등) 더 넓은 풀로 넘어간다.
+ * 지정한 난이도 풀에 마땅한 단어가 없을 때만(드문 시작 글자 등) 한 단계씩 더 넓은 풀로 넘어간다.
  */
 export function getPoolsForDifficulty(difficultyPools, difficulty) {
-  switch (difficulty) {
-    case Difficulty.EASY:
-      return [difficultyPools.easy, difficultyPools.normal, difficultyPools.hard];
-    case Difficulty.HARD:
-      return [difficultyPools.hard];
-    case Difficulty.NORMAL:
-    default:
-      return [difficultyPools.normal, difficultyPools.hard];
-  }
+  const startIdx = DIFFICULTY_ORDER.indexOf(difficulty);
+  const order = startIdx === -1 ? DIFFICULTY_ORDER : DIFFICULTY_ORDER.slice(startIdx);
+  return order.map((d) => difficultyPools[d]);
 }
 
 /**

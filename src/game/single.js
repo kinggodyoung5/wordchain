@@ -1,9 +1,17 @@
 import { validateWord, pickStartWord, pickBotWord, getPoolsForDifficulty, Difficulty, lastChar, InvalidMessage } from './engine.js';
 import { renderChainChar } from './dueum.js';
 
-const TURN_MS = 20000;
 const BOT_THINK_MIN_MS = 700;
 const BOT_THINK_MAX_MS = 1600;
+
+// 난이도별 턴 제한시간(ms). null이면 시간 제한 없음.
+const TURN_MS_BY_DIFFICULTY = {
+  [Difficulty.VERY_EASY]: null,
+  [Difficulty.EASY]: null,
+  [Difficulty.NORMAL]: 30000,
+  [Difficulty.HARD]: 20000,
+  [Difficulty.VERY_HARD]: 20000,
+};
 
 export class SingleGame {
   /**
@@ -14,6 +22,9 @@ export class SingleGame {
     this.profanitySet = profanitySet;
     this.el = el;
     this.difficulty = difficulty || Difficulty.NORMAL;
+    this.turnMs = Object.prototype.hasOwnProperty.call(TURN_MS_BY_DIFFICULTY, this.difficulty)
+      ? TURN_MS_BY_DIFFICULTY[this.difficulty]
+      : 20000;
     this.onEnd = onEnd;
     this.usedWords = new Set();
     this.currentChar = null;
@@ -66,7 +77,13 @@ export class SingleGame {
       this.el.input.disabled = false;
       this.el.input.value = '';
       this.el.input.focus();
-      this.startTimer(() => this.finish('bot', 'TIMEOUT'));
+      if (this.turnMs) {
+        this.el.timerFill.parentElement.style.visibility = 'visible';
+        this.startTimer(() => this.finish('bot', 'TIMEOUT'));
+      } else {
+        this.clearTimer();
+        this.el.timerFill.parentElement.style.visibility = 'hidden';
+      }
     } else {
       this.el.banner.textContent = '봇이 생각 중…';
       this.el.input.disabled = true;
@@ -119,10 +136,10 @@ export class SingleGame {
 
   startTimer(onTimeout) {
     this.clearTimer();
-    this.deadline = Date.now() + TURN_MS;
+    this.deadline = Date.now() + this.turnMs;
     const tick = () => {
       const remain = this.deadline - Date.now();
-      const pct = Math.max(0, remain / TURN_MS) * 100;
+      const pct = Math.max(0, remain / this.turnMs) * 100;
       this.el.timerFill.style.width = pct + '%';
       this.el.timerFill.classList.toggle('low', pct < 30);
       if (remain <= 0) {

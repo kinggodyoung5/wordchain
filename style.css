@@ -95,6 +95,17 @@ main {
 .mode-title { font-size: 1.1rem; font-weight: 700; }
 .mode-desc { color: var(--text-dim); font-size: .85rem; }
 
+.difficulty-grid .mode-card {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  text-align: left;
+}
+.difficulty-grid .mode-icon { font-size: 1.6rem; }
+.difficulty-grid .mode-title { display: block; }
+.difficulty-grid .mode-desc { display: block; }
+
 .hint { color: var(--text-dim); font-size: .82rem; text-align: center; margin-top: 18px; }
 
 .card {

@@ -36,21 +36,31 @@
     <!-- 싱글 모드: 난이도 선택 -->
     <section id="screen-single-difficulty" class="screen">
       <p class="tagline">봇의 난이도를 골라주세요</p>
-      <div class="menu-grid">
+      <div class="menu-grid difficulty-grid">
+        <button class="mode-card" data-difficulty="veryEasy">
+          <span class="mode-icon">🌷</span>
+          <span class="mode-title">아주 쉬움</span>
+          <span class="mode-desc">사용빈도 상위 500개 · 시간 제한 없음</span>
+        </button>
         <button class="mode-card" data-difficulty="easy">
           <span class="mode-icon">🌱</span>
           <span class="mode-title">쉬움</span>
-          <span class="mode-desc">실제 사용빈도 상위 700개, 가장 흔한 단어만 사용해요</span>
+          <span class="mode-desc">사용빈도 상위 700개 · 시간 제한 없음</span>
         </button>
         <button class="mode-card" data-difficulty="normal">
           <span class="mode-icon">⚖️</span>
           <span class="mode-title">보통</span>
-          <span class="mode-desc">고유명사를 제외한 상용 단어 3천여 개를 사용해요</span>
+          <span class="mode-desc">사용빈도 상위 1,500개 · 제한시간 30초</span>
         </button>
         <button class="mode-card" data-difficulty="hard">
           <span class="mode-icon">🔥</span>
           <span class="mode-title">어려움</span>
-          <span class="mode-desc">전체 사전(18만여 개)에서 자유롭게 사용해요</span>
+          <span class="mode-desc">사용빈도 상위 2,500개 · 제한시간 20초</span>
+        </button>
+        <button class="mode-card" data-difficulty="veryHard">
+          <span class="mode-icon">💀</span>
+          <span class="mode-title">매우 어려움</span>
+          <span class="mode-desc">전체 사전(18만여 개) · 제한시간 20초</span>
         </button>
       </div>
     </section>
