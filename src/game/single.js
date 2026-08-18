@@ -1,4 +1,5 @@
 import { validateWord, pickStartWord, pickBotWord, lastChar, InvalidMessage } from './engine.js';
+import { renderChainChar } from './dueum.js';
 
 const TURN_MS = 20000;
 const BOT_THINK_MIN_MS = 700;
@@ -43,7 +44,7 @@ export class SingleGame {
   }
 
   setCurrentChar(c) {
-    this.el.currentChar.textContent = c;
+    renderChainChar(this.el.currentChar, c);
   }
 
   addChip(word, who) {

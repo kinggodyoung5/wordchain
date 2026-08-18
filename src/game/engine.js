@@ -1,5 +1,6 @@
 import { isHangulWord } from '../data/words.js';
 import { containsProfanity } from '../data/profanity.js';
+import { isValidChainStart, chainStartCandidates } from './dueum.js';
 
 export const MIN_WORD_LENGTH = 2;
 
@@ -15,7 +16,7 @@ export const InvalidReason = {
 export const InvalidMessage = {
   [InvalidReason.TOO_SHORT]: `${MIN_WORD_LENGTH}글자 이상 입력해주세요.`,
   [InvalidReason.NOT_HANGUL]: '한글 단어만 입력할 수 있습니다.',
-  [InvalidReason.WRONG_START]: '이전 단어의 마지막 글자로 시작해야 해요.',
+  [InvalidReason.WRONG_START]: '이전 단어의 마지막 글자(두음법칙 포함)로 시작해야 해요.',
   [InvalidReason.ALREADY_USED]: '이미 사용된 단어예요.',
   [InvalidReason.NOT_IN_DICTIONARY]: '사전에 없는 단어예요.',
   [InvalidReason.PROFANITY]: '사용할 수 없는 단어예요.',
@@ -26,8 +27,9 @@ export function lastChar(word) {
 }
 
 /**
- * 끝말잇기 단어 검증. 한글 자모 분해나 두음법칙은 처리하지 않고
- * 마지막 글자와 시작 글자를 문자열 그대로 비교한다.
+ * 끝말잇기 단어 검증. 시작 글자 판정은 문자열 그대로 비교하되,
+ * 두음법칙(ㄴ/ㄹ이 어두에서 바뀌는 규칙)에 해당하는 경우만 예외로 허용한다.
+ * 그 외 한글 자모 처리는 하지 않는다.
  */
 export function validateWord(word, { requiredFirstChar, usedWords, dictionarySet, profanitySet }) {
   if (!word || word.length < MIN_WORD_LENGTH) {
@@ -36,7 +38,7 @@ export function validateWord(word, { requiredFirstChar, usedWords, dictionarySet
   if (!isHangulWord(word)) {
     return { ok: false, reason: InvalidReason.NOT_HANGUL };
   }
-  if (requiredFirstChar && word[0] !== requiredFirstChar) {
+  if (requiredFirstChar && !isValidChainStart(requiredFirstChar, word[0])) {
     return { ok: false, reason: InvalidReason.WRONG_START };
   }
   if (usedWords.has(word)) {
@@ -58,12 +60,17 @@ export function pickStartWord(commonList, usedWords = new Set()) {
 
 /**
  * 봇의 다음 단어 선택. 우선 상용 단어 목록에서 찾고, 없으면 전체 사전에서 찾는다.
+ * 두음법칙 변형 시작 글자(예: '력' → '역')도 함께 후보로 검색한다.
  */
 export function pickBotWord({ requiredFirstChar, usedWords, commonByFirstChar, fullByFirstChar }) {
+  const startChars = chainStartCandidates(requiredFirstChar);
+
   const tryPool = (index) => {
-    const pool = index.get(requiredFirstChar);
-    if (!pool) return null;
-    const candidates = pool.filter((w) => !usedWords.has(w));
+    let candidates = [];
+    for (const c of startChars) {
+      const pool = index.get(c);
+      if (pool) candidates = candidates.concat(pool.filter((w) => !usedWords.has(w)));
+    }
     if (candidates.length === 0) return null;
     return candidates[Math.floor(Math.random() * candidates.length)];
   };

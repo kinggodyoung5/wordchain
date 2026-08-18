@@ -39,10 +39,17 @@
 <button id="botBtn">봇 단어 뽑기</button>
 <div id="botResult"></div>
 
+<h2>4. 두음법칙(dueumVariant) 직접 실험</h2>
+<p>한 글자를 입력하면 어두(단어 첫머리)에서 어떻게 바뀌는지 계산해서 보여줍니다. 규칙과 무관한 글자는 "변형 없음"이 나와야 정상입니다.</p>
+<input id="dueumInput" maxlength="1" placeholder="예: 력" />
+<button id="dueumBtn">변형 계산</button>
+<div id="dueumResult"></div>
+
 <script type="module">
 import { loadDictionary } from './src/data/words.js';
 import { loadProfanitySet } from './src/data/profanity.js';
 import { validateWord, pickBotWord, InvalidReason } from './src/game/engine.js';
+import { dueumVariant } from './src/game/dueum.js';
 
 const dict = await loadDictionary();
 const profanitySet = await loadProfanitySet();
@@ -63,6 +70,15 @@ const cases = [
   { desc: '사전에 없는 단어(무작위 글자)', word: '가나다라마바사', requiredFirstChar: '가', usedWords: new Set(), expected: InvalidReason.NOT_IN_DICTIONARY },
   { desc: '비속어 필터', word: '씨발', requiredFirstChar: '씨', usedWords: new Set(), expected: InvalidReason.PROFANITY },
   { desc: '정상 단어, 첫 단어(제약 없음)', word: '학교', requiredFirstChar: null, usedWords: new Set(), expected: null },
+  // 두음법칙: ㄹ+y모음 → ㅇ
+  { desc: '두음법칙(력→역): 국력 다음 역사', word: '역사', requiredFirstChar: '력', usedWords: new Set(), expected: null },
+  { desc: '두음법칙(리→이): ...관리 다음 이유', word: '이유', requiredFirstChar: '리', usedWords: new Set(), expected: null },
+  // 두음법칙: ㄹ+일반모음 → ㄴ
+  { desc: '두음법칙(락→낙): ...쾌락 다음 낙원', word: '낙원', requiredFirstChar: '락', usedWords: new Set(), expected: null },
+  { desc: '두음법칙(로→노): ...경로 다음 노인', word: '노인', requiredFirstChar: '로', usedWords: new Set(), expected: null },
+  // 두음법칙 오적용 방지: 무관한 글자는 여전히 거부되어야 함
+  { desc: '두음법칙 오남용 방지: 력 다음 아무 단어나 허용 X', word: '학교', requiredFirstChar: '력', usedWords: new Set(), expected: InvalidReason.WRONG_START },
+  { desc: '두음법칙 범위 밖: ㄱ/ㅁ 등은 변형 없음(가→나 아님)', word: '나라', requiredFirstChar: '가', usedWords: new Set(), expected: InvalidReason.WRONG_START },
 ];
 
 const tbody = document.querySelector('#validateTable tbody');
@@ -106,6 +122,16 @@ document.getElementById('botBtn').addEventListener('click', () => {
   }
   const fromCommon = dict.commonByFirstChar.get(c)?.includes(word);
   box.innerHTML = `선택된 단어: <b>${word}</b> — 출처: ${fromCommon ? '상용 단어 목록 (3,099개)' : '전체 사전 fallback (183,026개)'}`;
+});
+
+document.getElementById('dueumBtn').addEventListener('click', () => {
+  const c = document.getElementById('dueumInput').value.trim();
+  const box = document.getElementById('dueumResult');
+  if (!c) { box.textContent = '글자를 입력해주세요.'; return; }
+  const variant = dueumVariant(c);
+  box.textContent = variant
+    ? `"${c}" → 어두에서는 "${variant}"(으)로도 시작 가능 (예: 화면에는 "${c} (또는 ${variant})"로 표시됨)`
+    : `"${c}"에는 두음법칙이 적용되지 않습니다 (변형 없음).`;
 });
 </script>
 </body>

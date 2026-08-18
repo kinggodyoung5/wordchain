@@ -1,5 +1,6 @@
 import { getFirebase, getDbModule } from '../firebase/firebaseClient.js';
 import { validateWord, pickStartWord, lastChar, InvalidMessage } from './engine.js';
+import { renderChainChar } from './dueum.js';
 
 const TURN_MS = 20000;
 const ROOM_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 혼동되는 0/O/1/I 제외
@@ -168,7 +169,11 @@ export class MultiGame {
     const g = this.game;
     if (!g || !this.el.currentCharEl) return;
 
-    this.el.currentCharEl.textContent = g.currentChar || '-';
+    if (g.currentChar) {
+      renderChainChar(this.el.currentCharEl, g.currentChar);
+    } else {
+      this.el.currentCharEl.textContent = '-';
+    }
 
     // 참가자 순서 표시
     this.el.playerOrder.innerHTML = '';
