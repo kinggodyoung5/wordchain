@@ -36,8 +36,8 @@
 <h2>3. 난이도별 봇 단어 선택(pickBotWord) 직접 실험</h2>
 <p>난이도를 고르고 시작 글자를 입력하면, 그 난이도 풀에서 봇이 실제로 어떤 단어를 뽑는지 20번 반복해서 어느 출처(쉬움/보통/어려움 풀)에서 나왔는지 통계로 보여줍니다.</p>
 <select id="difficultySelect">
-  <option value="easy">쉬움 (상용 단어만)</option>
-  <option value="normal" selected>보통 (상용 + 2음절)</option>
+  <option value="easy">쉬움 (빈도 상위 700개)</option>
+  <option value="normal" selected>보통 (상용 단어 3천여 개)</option>
   <option value="hard">어려움 (전체 사전)</option>
 </select>
 <input id="charInput" maxlength="1" placeholder="예: 국" />
@@ -61,12 +61,10 @@ const profanitySet = await loadProfanitySet();
 
 const poolCount = (m) => [...m.values()].reduce((sum, arr) => sum + arr.length, 0);
 document.getElementById('stats').innerHTML = `
-  <div class="stat"><b>${dict.commonList.length.toLocaleString()}</b>상용 단어 (봇/시작단어용)</div>
-  <div class="stat"><b>${dict.fullSet.size.toLocaleString()}</b>전체 검증 사전</div>
+  <div class="stat"><b>${dict.easyList.length.toLocaleString()}</b>쉬움 풀 (빈도 상위)</div>
+  <div class="stat"><b>${dict.commonList.length.toLocaleString()}</b>보통 풀 (상용 단어)</div>
+  <div class="stat"><b>${dict.fullSet.size.toLocaleString()}</b>어려움 풀 / 전체 검증 사전</div>
   <div class="stat"><b>${profanitySet.size}</b>비속어 필터 항목</div>
-  <div class="stat"><b>${poolCount(dict.difficultyPools.easy).toLocaleString()}</b>쉬움 풀</div>
-  <div class="stat"><b>${poolCount(dict.difficultyPools.normal).toLocaleString()}</b>보통 풀</div>
-  <div class="stat"><b>${poolCount(dict.difficultyPools.hard).toLocaleString()}</b>어려움 풀</div>
 `;
 
 const usedWords1 = new Set(['자취']);
@@ -88,6 +86,10 @@ const cases = [
   // 두음법칙 오적용 방지: 무관한 글자는 여전히 거부되어야 함
   { desc: '두음법칙 오남용 방지: 력 다음 아무 단어나 허용 X', word: '학교', requiredFirstChar: '력', usedWords: new Set(), expected: InvalidReason.WRONG_START },
   { desc: '두음법칙 범위 밖: ㄱ/ㅁ 등은 변형 없음(가→나 아님)', word: '나라', requiredFirstChar: '가', usedWords: new Set(), expected: InvalidReason.WRONG_START },
+  // 고유명사 제외 확인
+  { desc: '고유명사 제외: 지명(부산)은 이제 사전에 없어야 함', word: '부산', requiredFirstChar: '부', usedWords: new Set(), expected: InvalidReason.NOT_IN_DICTIONARY },
+  { desc: '고유명사 제외: 국가명(미국)은 이제 사전에 없어야 함', word: '미국', requiredFirstChar: '미', usedWords: new Set(), expected: InvalidReason.NOT_IN_DICTIONARY },
+  { desc: '일반명사는 계속 허용: 깍두기', word: '깍두기', requiredFirstChar: '깍', usedWords: new Set(), expected: null },
 ];
 
 const tbody = document.querySelector('#validateTable tbody');
@@ -116,9 +118,9 @@ for (const c of cases) {
 document.getElementById('validateSummary').textContent = `${pass} / ${cases.length} 통과`;
 
 function sourceOfWord(word) {
-  if (dict.commonByFirstChar.get(word[0])?.includes(word)) return '쉬움(상용)';
-  if (word.length === 2) return '보통(2음절)';
-  return '어려움(전체)';
+  if (dict.difficultyPools.easy.get(word[0])?.includes(word)) return '쉬움(빈도 상위 700)';
+  if (dict.difficultyPools.normal.get(word[0])?.includes(word)) return '보통(상용 3천여)';
+  return '어려움(전체 사전)';
 }
 
 document.getElementById('botBtn').addEventListener('click', () => {
