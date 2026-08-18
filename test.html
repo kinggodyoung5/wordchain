@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>끝말잇기 - 테스트 페이지</title>
+<style>
+  body { font-family: -apple-system, "Malgun Gothic", sans-serif; max-width: 760px; margin: 30px auto; padding: 0 16px; background:#0f1220; color:#eef0fb; }
+  h1 { font-size: 1.3rem; }
+  h2 { font-size: 1.05rem; margin-top: 2em; border-bottom: 1px solid #2c3358; padding-bottom: 6px; }
+  table { width: 100%; border-collapse: collapse; font-size: .85rem; margin-top: 10px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #2c3358; }
+  .pass { color: #4ade80; font-weight: 700; }
+  .fail { color: #ff6b81; font-weight: 700; }
+  .stat { display: inline-block; margin-right: 24px; margin-bottom: 6px; }
+  .stat b { font-size: 1.2rem; display:block; }
+  input, button { font-size: .95rem; padding: 8px; border-radius: 8px; border: 1px solid #2c3358; background:#1a1e33; color:#eef0fb; }
+  button { cursor: pointer; }
+  #botResult { margin-top: 10px; padding: 10px; background:#1a1e33; border-radius: 8px; min-height: 1.4em; }
+  code { background:#1a1e33; padding: 2px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h1>🧪 끝말잇기 엔진 테스트 페이지</h1>
+<p>UI 없이 <code>engine.js</code> / <code>words.js</code> / <code>profanity.js</code>의 동작만 빠르게 확인하기 위한 페이지입니다. (실제 게임 화면 아님)</p>
+
+<h2>1. 사전 로딩 통계</h2>
+<div id="stats">불러오는 중…</div>
+
+<h2>2. 단어 검증(validateWord) 자동 테스트</h2>
+<table id="validateTable">
+  <thead><tr><th>설명</th><th>입력</th><th>필요 시작 글자</th><th>기대 결과</th><th>실제 결과</th><th>판정</th></tr></thead>
+  <tbody></tbody>
+</table>
+<p id="validateSummary"></p>
+
+<h2>3. 봇 단어 선택(pickBotWord) 직접 실험</h2>
+<p>시작 글자를 입력하면 봇이 실제로 어떤 단어를 고르는지, 상용 단어(3,099개) 중에서 골랐는지 전체 사전(fallback)에서 골랐는지 보여줍니다.</p>
+<input id="charInput" maxlength="1" placeholder="예: 국" />
+<button id="botBtn">봇 단어 뽑기</button>
+<div id="botResult"></div>
+
+<script type="module">
+import { loadDictionary } from './src/data/words.js';
+import { loadProfanitySet } from './src/data/profanity.js';
+import { validateWord, pickBotWord, InvalidReason } from './src/game/engine.js';
+
+const dict = await loadDictionary();
+const profanitySet = await loadProfanitySet();
+
+document.getElementById('stats').innerHTML = `
+  <div class="stat"><b>${dict.commonList.length.toLocaleString()}</b>상용 단어 (봇/시작단어용)</div>
+  <div class="stat"><b>${dict.fullSet.size.toLocaleString()}</b>전체 검증 사전</div>
+  <div class="stat"><b>${profanitySet.size}</b>비속어 필터 항목</div>
+`;
+
+const usedWords1 = new Set(['자취']);
+const cases = [
+  { desc: '정상 단어, 시작 글자 일치', word: '취미', requiredFirstChar: '취', usedWords: usedWords1, expected: null },
+  { desc: '시작 글자 불일치', word: '사과', requiredFirstChar: '취', usedWords: usedWords1, expected: InvalidReason.WRONG_START },
+  { desc: '이미 사용된 단어', word: '자취', requiredFirstChar: '자', usedWords: usedWords1, expected: InvalidReason.ALREADY_USED },
+  { desc: '한 글자 (너무 짧음)', word: '가', requiredFirstChar: '가', usedWords: new Set(), expected: InvalidReason.TOO_SHORT },
+  { desc: '한글이 아님', word: 'apple', requiredFirstChar: 'a', usedWords: new Set(), expected: InvalidReason.NOT_HANGUL },
+  { desc: '사전에 없는 단어(무작위 글자)', word: '가나다라마바사', requiredFirstChar: '가', usedWords: new Set(), expected: InvalidReason.NOT_IN_DICTIONARY },
+  { desc: '비속어 필터', word: '씨발', requiredFirstChar: '씨', usedWords: new Set(), expected: InvalidReason.PROFANITY },
+  { desc: '정상 단어, 첫 단어(제약 없음)', word: '학교', requiredFirstChar: null, usedWords: new Set(), expected: null },
+];
+
+const tbody = document.querySelector('#validateTable tbody');
+let pass = 0;
+for (const c of cases) {
+  const result = validateWord(c.word, {
+    requiredFirstChar: c.requiredFirstChar,
+    usedWords: c.usedWords,
+    dictionarySet: dict.fullSet,
+    profanitySet,
+  });
+  const actualReason = result.ok ? null : result.reason;
+  const ok = actualReason === c.expected;
+  if (ok) pass++;
+  const tr = document.createElement('tr');
+  tr.innerHTML = `
+    <td>${c.desc}</td>
+    <td>${c.word}</td>
+    <td>${c.requiredFirstChar ?? '(없음)'}</td>
+    <td>${c.expected ?? 'OK'}</td>
+    <td>${actualReason ?? 'OK'}</td>
+    <td class="${ok ? 'pass' : 'fail'}">${ok ? 'PASS' : 'FAIL'}</td>
+  `;
+  tbody.appendChild(tr);
+}
+document.getElementById('validateSummary').textContent = `${pass} / ${cases.length} 통과`;
+
+document.getElementById('botBtn').addEventListener('click', () => {
+  const c = document.getElementById('charInput').value.trim();
+  const box = document.getElementById('botResult');
+  if (!c) { box.textContent = '글자를 입력해주세요.'; return; }
+  const word = pickBotWord({
+    requiredFirstChar: c,
+    usedWords: new Set(),
+    commonByFirstChar: dict.commonByFirstChar,
+    fullByFirstChar: dict.fullByFirstChar,
+  });
+  if (!word) {
+    box.textContent = `"${c}"(으)로 시작하는 단어를 찾지 못했습니다 (봇이 막힘 → 이 경우 플레이어 승리 처리).`;
+    return;
+  }
+  const fromCommon = dict.commonByFirstChar.get(c)?.includes(word);
+  box.innerHTML = `선택된 단어: <b>${word}</b> — 출처: ${fromCommon ? '상용 단어 목록 (3,099개)' : '전체 사전 fallback (183,026개)'}`;
+});
+</script>
+</body>
+</html>
