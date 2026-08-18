@@ -75,13 +75,15 @@ const DIFFICULTY_ORDER = [
 ];
 
 /**
- * 난이도별로 봇이 뽑을 단어 풀(Map<시작글자, 단어[]>)을 우선순위대로 나열한다.
- * 지정한 난이도 풀에 마땅한 단어가 없을 때만(드문 시작 글자 등) 한 단계씩 더 넓은 풀로 넘어간다.
+ * 난이도별로 봇이 뽑을 단어 풀(Map<시작글자, 단어[]>)을 반환한다.
+ * 더 넓은 풀로 넘어가는 폴백은 하지 않는다 - 선택한 난이도 풀 안에 이어갈 단어가
+ * 없으면(예: 아주 쉬움에서 드문 시작 글자) 봇이 그대로 패배해야 난이도별 단어 수
+ * 제한이 실제로 지켜진다. (pickBotWord가 빈 풀이면 null을 반환하고,
+ * single.js가 이를 봇 패배로 처리한다.)
  */
 export function getPoolsForDifficulty(difficultyPools, difficulty) {
-  const startIdx = DIFFICULTY_ORDER.indexOf(difficulty);
-  const order = startIdx === -1 ? DIFFICULTY_ORDER : DIFFICULTY_ORDER.slice(startIdx);
-  return order.map((d) => difficultyPools[d]);
+  const key = DIFFICULTY_ORDER.includes(difficulty) ? difficulty : Difficulty.NORMAL;
+  return [difficultyPools[key]];
 }
 
 /**
