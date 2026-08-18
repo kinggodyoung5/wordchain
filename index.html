@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>끝말잇기</title>
+<link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <button id="btn-back" class="icon-btn hidden" aria-label="뒤로가기">←</button>
+    <h1 class="brand">🔤 끝말잇기</h1>
+    <button id="btn-settings" class="icon-btn" aria-label="Firebase 설정">⚙️</button>
+  </header>
+
+  <main>
+    <!-- 메인 메뉴 -->
+    <section id="screen-menu" class="screen active">
+      <p class="tagline">단어를 이어서 만들어봐요!</p>
+      <div class="menu-grid">
+        <button class="mode-card" data-mode="single">
+          <span class="mode-icon">🤖</span>
+          <span class="mode-title">싱글 모드</span>
+          <span class="mode-desc">봇과 1대1로 끝말잇기</span>
+        </button>
+        <button class="mode-card" data-mode="multi">
+          <span class="mode-icon">👥</span>
+          <span class="mode-title">대결 모드</span>
+          <span class="mode-desc">실시간 여러 명과 대결</span>
+        </button>
+      </div>
+      <p class="hint">단어 사전 로딩 중… <span id="dict-status">준비 중</span></p>
+    </section>
+
+    <!-- 싱글 모드 -->
+    <section id="screen-single" class="screen">
+      <div class="game-panel">
+        <div class="turn-banner" id="single-turn-banner">게임을 시작합니다…</div>
+        <div class="current-char" id="single-current-char">-</div>
+        <div class="timer-bar"><div class="timer-fill" id="single-timer-fill"></div></div>
+        <div class="word-log" id="single-word-log" aria-live="polite"></div>
+        <form id="single-form" class="word-form">
+          <input id="single-input" class="word-input" type="text" placeholder="단어를 입력하세요" autocomplete="off" maxlength="20" disabled />
+          <button type="submit" class="btn-primary">제출</button>
+        </form>
+        <p class="error-text" id="single-error"></p>
+      </div>
+    </section>
+
+    <!-- 대결 모드: 로비 -->
+    <section id="screen-multi-lobby" class="screen">
+      <div class="card">
+        <label class="field-label" for="multi-nickname">닉네임</label>
+        <input id="multi-nickname" class="text-input" type="text" maxlength="10" placeholder="닉네임을 입력하세요" />
+
+        <button id="btn-create-room" class="btn-primary full-width">방 만들기</button>
+
+        <div class="divider">또는</div>
+
+        <label class="field-label" for="multi-room-code">방 코드</label>
+        <input id="multi-room-code" class="text-input" type="text" maxlength="6" placeholder="예: AB12CD" style="text-transform:uppercase" />
+        <button id="btn-join-room" class="btn-secondary full-width">참가하기</button>
+
+        <p class="error-text" id="multi-lobby-error"></p>
+      </div>
+    </section>
+
+    <!-- 대결 모드: 대기실 -->
+    <section id="screen-multi-room" class="screen">
+      <div class="card">
+        <p class="room-code-label">방 코드</p>
+        <p class="room-code" id="room-code-display">------</p>
+        <ul class="player-list" id="room-player-list"></ul>
+        <button id="btn-start-game" class="btn-primary full-width hidden">게임 시작</button>
+        <p class="hint" id="room-wait-hint">방장이 시작하기를 기다리는 중…</p>
+        <button id="btn-leave-room" class="btn-text">방 나가기</button>
+      </div>
+    </section>
+
+    <!-- 대결 모드: 게임 진행 -->
+    <section id="screen-multi-game" class="screen">
+      <div class="game-panel">
+        <ul class="player-order" id="multi-player-order"></ul>
+        <div class="turn-banner" id="multi-turn-banner">대기 중…</div>
+        <div class="current-char" id="multi-current-char">-</div>
+        <div class="timer-bar"><div class="timer-fill" id="multi-timer-fill"></div></div>
+        <div class="word-log" id="multi-word-log" aria-live="polite"></div>
+        <form id="multi-form" class="word-form">
+          <input id="multi-input" class="word-input" type="text" placeholder="단어를 입력하세요" autocomplete="off" maxlength="20" disabled />
+          <button type="submit" class="btn-primary">제출</button>
+        </form>
+        <p class="error-text" id="multi-error"></p>
+        <button id="btn-leave-game" class="btn-text">나가기</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- 결과 모달 -->
+  <div id="modal-result" class="modal hidden">
+    <div class="modal-box">
+      <p class="result-emoji" id="result-emoji">🎉</p>
+      <p class="result-title" id="result-title">승리했습니다!</p>
+      <p class="result-desc" id="result-desc"></p>
+      <button id="btn-result-close" class="btn-primary full-width">확인</button>
+    </div>
+  </div>
+
+  <!-- Firebase 설정 모달 -->
+  <div id="modal-firebase" class="modal hidden">
+    <div class="modal-box">
+      <h2>Firebase 설정</h2>
+      <p class="modal-desc">
+        기본값은 <b>중앙 설정</b>(저장소에 포함된 공용 Firebase 프로젝트)을 사용합니다.
+        자신의 Firebase 프로젝트를 쓰고 싶다면 아래에 config JSON을 붙여넣으세요 (이 브라우저에만 저장됩니다).
+      </p>
+      <textarea id="firebase-config-input" class="config-textarea" placeholder='{"apiKey":"...","authDomain":"...","databaseURL":"...","projectId":"...","appId":"..."}'></textarea>
+      <p class="config-status" id="firebase-config-status"></p>
+      <div class="modal-actions">
+        <button id="btn-firebase-save" class="btn-primary">저장하고 사용</button>
+        <button id="btn-firebase-reset" class="btn-secondary">중앙 설정으로 초기화</button>
+        <button id="btn-firebase-close" class="btn-text">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast-container"></div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
