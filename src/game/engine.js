@@ -58,21 +58,45 @@ export function pickStartWord(commonList, usedWords = new Set()) {
   return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
+export const Difficulty = {
+  EASY: 'easy',
+  NORMAL: 'normal',
+  HARD: 'hard',
+};
+
 /**
- * 봇의 다음 단어 선택. 우선 상용 단어 목록에서 찾고, 없으면 전체 사전에서 찾는다.
- * 두음법칙 변형 시작 글자(예: '력' → '역')도 함께 후보로 검색한다.
+ * 난이도별로 봇이 뽑을 단어 풀(Map<시작글자, 단어[]>)을 우선순위대로 나열한다.
+ * 지정한 난이도 풀에 마땅한 단어가 없을 때만(드문 시작 글자 등) 더 넓은 풀로 넘어간다.
  */
-export function pickBotWord({ requiredFirstChar, usedWords, commonByFirstChar, fullByFirstChar }) {
+export function getPoolsForDifficulty(difficultyPools, difficulty) {
+  switch (difficulty) {
+    case Difficulty.EASY:
+      return [difficultyPools.easy, difficultyPools.normal, difficultyPools.hard];
+    case Difficulty.HARD:
+      return [difficultyPools.hard];
+    case Difficulty.NORMAL:
+    default:
+      return [difficultyPools.normal, difficultyPools.hard];
+  }
+}
+
+/**
+ * 봇의 다음 단어 선택. pools를 우선순위 순서대로 훑어 첫 번째로 후보가 있는 풀에서 고른다.
+ * 두음법칙 변형 시작 글자(예: '력' → '역')도 함께 후보로 검색한다.
+ * @param {{requiredFirstChar:string, usedWords:Set<string>, pools: Map<string,string[]>[]}} opts
+ */
+export function pickBotWord({ requiredFirstChar, usedWords, pools }) {
   const startChars = chainStartCandidates(requiredFirstChar);
 
-  const tryPool = (index) => {
+  for (const pool of pools) {
     let candidates = [];
     for (const c of startChars) {
-      const pool = index.get(c);
-      if (pool) candidates = candidates.concat(pool.filter((w) => !usedWords.has(w)));
+      const list = pool.get(c);
+      if (list) candidates = candidates.concat(list.filter((w) => !usedWords.has(w)));
     }
-    if (candidates.length === 0) return null;
-    return candidates[Math.floor(Math.random() * candidates.length)];
-  };
-  return tryPool(commonByFirstChar) ?? tryPool(fullByFirstChar);
+    if (candidates.length > 0) {
+      return candidates[Math.floor(Math.random() * candidates.length)];
+    }
+  }
+  return null;
 }

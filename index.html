@@ -33,6 +33,28 @@
       <p class="hint">단어 사전 로딩 중… <span id="dict-status">준비 중</span></p>
     </section>
 
+    <!-- 싱글 모드: 난이도 선택 -->
+    <section id="screen-single-difficulty" class="screen">
+      <p class="tagline">봇의 난이도를 골라주세요</p>
+      <div class="menu-grid">
+        <button class="mode-card" data-difficulty="easy">
+          <span class="mode-icon">🌱</span>
+          <span class="mode-title">쉬움</span>
+          <span class="mode-desc">봇이 상용 단어(3천여 개)만 사용해요</span>
+        </button>
+        <button class="mode-card" data-difficulty="normal">
+          <span class="mode-icon">⚖️</span>
+          <span class="mode-title">보통</span>
+          <span class="mode-desc">상용 단어 + 2음절 단어까지 사용해요</span>
+        </button>
+        <button class="mode-card" data-difficulty="hard">
+          <span class="mode-icon">🔥</span>
+          <span class="mode-title">어려움</span>
+          <span class="mode-desc">전체 사전(18만여 개)에서 자유롭게 사용해요</span>
+        </button>
+      </div>
+    </section>
+
     <!-- 싱글 모드 -->
     <section id="screen-single" class="screen">
       <div class="game-panel">

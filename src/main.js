@@ -1,6 +1,7 @@
 import { loadDictionary } from './data/words.js';
 import { loadProfanitySet } from './data/profanity.js';
 import { SingleGame } from './game/single.js';
+import { Difficulty } from './game/engine.js';
 import { MultiGame } from './game/multi.js';
 import {
   getLocalOverrideConfig,
@@ -14,6 +15,7 @@ const $ = (id) => document.getElementById(id);
 
 const screens = {
   menu: $('screen-menu'),
+  'single-difficulty': $('screen-single-difficulty'),
   single: $('screen-single'),
   'multi-lobby': $('screen-multi-lobby'),
   'multi-room': $('screen-multi-room'),
@@ -68,25 +70,32 @@ async function boot() {
 boot();
 
 // ── 메뉴 ──────────────────────────────────────────────────────────────
-document.querySelectorAll('.mode-card').forEach((btn) => {
+document.querySelectorAll('#screen-menu .mode-card').forEach((btn) => {
   btn.addEventListener('click', () => {
     if (!dict) {
       toast('단어 사전을 아직 불러오는 중입니다…');
       return;
     }
     const mode = btn.dataset.mode;
-    if (mode === 'single') startSingle();
+    if (mode === 'single') showScreen('single-difficulty');
     else showScreen('multi-lobby');
   });
 });
 
+document.querySelectorAll('#screen-single-difficulty .mode-card').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    startSingle(btn.dataset.difficulty);
+  });
+});
+
 // ── 싱글 모드 ─────────────────────────────────────────────────────────
-function startSingle() {
+function startSingle(difficulty = Difficulty.NORMAL) {
   showScreen('single');
   if (singleGame) singleGame.destroy();
   singleGame = new SingleGame({
     dict,
     profanitySet,
+    difficulty,
     el: {
       form: $('single-form'),
       input: $('single-input'),

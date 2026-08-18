@@ -1,4 +1,4 @@
-import { validateWord, pickStartWord, pickBotWord, lastChar, InvalidMessage } from './engine.js';
+import { validateWord, pickStartWord, pickBotWord, getPoolsForDifficulty, Difficulty, lastChar, InvalidMessage } from './engine.js';
 import { renderChainChar } from './dueum.js';
 
 const TURN_MS = 20000;
@@ -7,12 +7,13 @@ const BOT_THINK_MAX_MS = 1600;
 
 export class SingleGame {
   /**
-   * @param {{dict: any, profanitySet: Set<string>, el: Record<string, HTMLElement>, onEnd: (result:{winner:'me'|'bot', reason:string})=>void}} opts
+   * @param {{dict: any, profanitySet: Set<string>, el: Record<string, HTMLElement>, difficulty?: string, onEnd: (result:{winner:'me'|'bot', reason:string})=>void}} opts
    */
-  constructor({ dict, profanitySet, el, onEnd }) {
+  constructor({ dict, profanitySet, el, difficulty, onEnd }) {
     this.dict = dict;
     this.profanitySet = profanitySet;
     this.el = el;
+    this.difficulty = difficulty || Difficulty.NORMAL;
     this.onEnd = onEnd;
     this.usedWords = new Set();
     this.currentChar = null;
@@ -29,6 +30,7 @@ export class SingleGame {
     this.usedWords.clear();
     this.el.log.innerHTML = '';
     this.el.error.textContent = '';
+    this.pools = getPoolsForDifficulty(this.dict.difficultyPools, this.difficulty);
 
     const startWord = pickStartWord(this.dict.commonList);
     this.usedWords.add(startWord);
@@ -79,8 +81,7 @@ export class SingleGame {
     const word = pickBotWord({
       requiredFirstChar: this.currentChar,
       usedWords: this.usedWords,
-      commonByFirstChar: this.dict.commonByFirstChar,
-      fullByFirstChar: this.dict.fullByFirstChar,
+      pools: this.pools,
     });
     if (!word) {
       this.finish('me', 'BOT_STUCK');
