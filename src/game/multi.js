@@ -209,6 +209,8 @@ export class MultiGame {
       const pct = Math.max(0, Math.min(100, (remain / TURN_MS) * 100));
       this.el.timerFill.style.width = pct + '%';
       this.el.timerFill.classList.toggle('low', pct < 30);
+    } else if (g.status === 'ended') {
+      this.el.turnBanner.textContent = '게임 종료';
     }
 
     if (g.status === 'ended' && this.lastGameStatus !== 'ended') {

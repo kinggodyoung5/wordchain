@@ -223,6 +223,8 @@ main {
 .word-form { display: flex; gap: 8px; }
 .word-form .word-input { flex: 1; }
 
+#btn-start-game.hidden { display: none; }
+
 .player-order {
   display: flex;
   gap: 8px;

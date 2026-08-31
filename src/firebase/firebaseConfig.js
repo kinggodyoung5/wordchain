@@ -4,13 +4,13 @@
 // Firebase 콘솔(https://console.firebase.google.com) > 프로젝트 설정 > 일반 > 내 앱 에서 확인할 수 있습니다.
 // (모두 무료 Spark 요금제로 충분합니다.)
 export const CENTRAL_FIREBASE_CONFIG = {
-  apiKey: 'YOUR_API_KEY',
-  authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
-  databaseURL: 'https://YOUR_PROJECT_ID-default-rtdb.asia-southeast1.firebasedatabase.app',
-  projectId: 'YOUR_PROJECT_ID',
-  storageBucket: 'YOUR_PROJECT_ID.appspot.com',
-  messagingSenderId: 'YOUR_SENDER_ID',
-  appId: 'YOUR_APP_ID',
+  apiKey: 'AIzaSyCyiS0Ki_B0ZKyWHlb6KN4MFeYOGvCnEK0',
+  authDomain: 'wordchain-23737.firebaseapp.com',
+  databaseURL: 'https://wordchain-23737-default-rtdb.asia-southeast1.firebasedatabase.app',
+  projectId: 'wordchain-23737',
+  storageBucket: 'wordchain-23737.firebasestorage.app',
+  messagingSenderId: '149469839512',
+  appId: '1:149469839512:web:697f0fa6399d78ab82d0ed',
 };
 
 const LOCAL_STORAGE_KEY = 'kkeutmalitgi:firebaseConfig';
