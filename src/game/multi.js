@@ -31,6 +31,7 @@ export class MultiGame {
     this.unsubGame = null;
     this.pollTimerId = null;
     this.lastGameStatus = null;
+    this.serverTimeOffset = 0;
 
     this.el.startBtn.addEventListener('click', () => this.startGame());
     this.el.leaveRoomBtn.addEventListener('click', () => this.leaveRoom());
@@ -44,8 +45,21 @@ export class MultiGame {
       this.db = db;
       this.uid = uid;
       this.dbMod = await getDbModule();
+      const { ref, onValue } = this.dbMod;
+      // 기기마다 시스템 시계가 다를 수 있어(특히 여러 명이 각자 폰/PC로 접속할 때),
+      // 턴 제한시간 판정은 반드시 서버 시각 기준 오프셋을 보정해서 써야 한다.
+      // 이걸 안 하면 시계가 빠른 기기가 "시간 다 됐다"고 실제보다 일찍 확정 반영해버려서
+      // 자기 차례가 되기도 전에 탈락시키는 등의 문제가 생긴다.
+      onValue(ref(this.db, '.info/serverTimeOffset'), (snap) => {
+        this.serverTimeOffset = snap.val() || 0;
+      });
     }
     return this.db;
+  }
+
+  /** 서버 시각으로 보정된 현재 시각(ms). turnDeadline 계산/비교에 항상 이걸 쓴다. */
+  now() {
+    return Date.now() + this.serverTimeOffset;
   }
 
   async createRoom(nickname) {
@@ -205,7 +219,7 @@ export class MultiGame {
       const currentUid = g.turnOrder[g.currentTurnIndex];
       const currentNick = this.players[currentUid]?.nickname || '???';
       this.el.turnBanner.textContent = myTurn ? '당신의 차례입니다' : `${currentNick}님의 차례`;
-      const remain = Math.max(0, (g.turnDeadline || 0) - Date.now());
+      const remain = Math.max(0, (g.turnDeadline || 0) - this.now());
       const pct = Math.max(0, Math.min(100, (remain / TURN_MS) * 100));
       this.el.timerFill.style.width = pct + '%';
       this.el.timerFill.classList.toggle('low', pct < 30);
@@ -246,9 +260,9 @@ export class MultiGame {
       usedWords: { [startWord]: true },
       log: [{ word: startWord, uid: null }],
       eliminated: {},
-      turnDeadline: Date.now() + TURN_MS,
+      turnDeadline: this.now() + TURN_MS,
       winnerUid: null,
-      startedAt: Date.now(),
+      startedAt: this.now(),
     });
     await set(ref(this.db, `rooms/${this.roomCode}/meta/status`), 'playing');
     this.callbacks.onGameStarted();
@@ -278,11 +292,16 @@ export class MultiGame {
     const myUid = this.uid;
     const dict = this.dict;
     const profanitySet = this.profanitySet;
+    const deadline = this.now() + TURN_MS;
 
-    await runTransaction(ref(this.db, `rooms/${this.roomCode}/game`), (game) => {
-      if (!game) return game;
-      if (game.status !== 'playing') return game;
-      if (game.turnOrder[game.currentTurnIndex] !== myUid) return game;
+    // 실패(턴이 이미 넘어감/시간초과로 탈락함 등) 시에는 game을 그대로 반환하지 않고
+    // undefined를 반환해 트랜잭션을 확실히 "커밋 안 됨" 상태로 만든다. 그래야
+    // result.committed로 실패를 구분해서 사용자에게 알려줄 수 있다. (전에는 항상
+    // "커밋됨"으로 보여서, 타이밍이 어긋나 단어가 조용히 씹혀도 아무 안내가 없었음)
+    const txResult = await runTransaction(ref(this.db, `rooms/${this.roomCode}/game`), (game) => {
+      if (!game) return undefined;
+      if (game.status !== 'playing') return undefined;
+      if (game.turnOrder[game.currentTurnIndex] !== myUid) return undefined;
       const used = new Set(Object.keys(game.usedWords || {}));
       const check = validateWord(word, {
         requiredFirstChar: game.currentChar,
@@ -290,7 +309,7 @@ export class MultiGame {
         dictionarySet: dict.fullSet,
         profanitySet,
       });
-      if (!check.ok) return game;
+      if (!check.ok) return undefined;
 
       game.usedWords = game.usedWords || {};
       game.usedWords[word] = true;
@@ -298,18 +317,34 @@ export class MultiGame {
       game.log.push({ word, uid: myUid });
       game.currentChar = lastChar(word);
       game.currentTurnIndex = nextActiveIndex(game, game.currentTurnIndex);
-      game.turnDeadline = Date.now() + TURN_MS;
+      game.turnDeadline = deadline;
       return game;
     });
+
+    if (!txResult.committed) {
+      this.el.error.textContent = '타이밍이 어긋났어요 (이미 차례가 지났을 수 있어요). 다시 시도해주세요.';
+    }
   };
 
   async checkTimeout() {
     if (!this.game || this.game.status !== 'playing') return;
-    if (Date.now() <= (this.game.turnDeadline || Infinity)) return;
+    const overBy = this.now() - (this.game.turnDeadline || Infinity);
+    if (overBy <= 0) return;
+
+    // 인원이 많아질수록 모든 클라이언트가 동시에 같은 트랜잭션을 시도하면
+    // 쓰기 경합이 커진다. 평소에는 "현재 차례" 또는 "바로 다음 차례"인 사람의
+    // 클라이언트만 탈락 처리를 시도하고, 그 둘 다 접속이 끊겼을 수도 있으니
+    // 시간이 3초 넘게 지나면 안전장치로 아무 클라이언트나 시도하게 한다.
+    const currentUid = this.game.turnOrder[this.game.currentTurnIndex];
+    const nextUid = this.game.turnOrder[nextActiveIndex(this.game, this.game.currentTurnIndex)];
+    const isPrimaryChecker = this.uid === currentUid || this.uid === nextUid;
+    if (!isPrimaryChecker && overBy < 3000) return;
+
     const { ref, runTransaction } = this.dbMod;
     await runTransaction(ref(this.db, `rooms/${this.roomCode}/game`), (game) => {
-      if (!game || game.status !== 'playing') return game;
-      if (Date.now() <= (game.turnDeadline || Infinity)) return game;
+      if (!game || game.status !== 'playing') return undefined;
+      const nowMs = this.now();
+      if (nowMs <= (game.turnDeadline || Infinity)) return undefined;
       const uid = game.turnOrder[game.currentTurnIndex];
       game.eliminated = game.eliminated || {};
       game.eliminated[uid] = true;
@@ -320,7 +355,7 @@ export class MultiGame {
         return game;
       }
       game.currentTurnIndex = nextActiveIndex(game, game.currentTurnIndex);
-      game.turnDeadline = Date.now() + TURN_MS;
+      game.turnDeadline = nowMs + TURN_MS;
       return game;
     });
   }
@@ -335,7 +370,7 @@ export class MultiGame {
           const { runTransaction } = this.dbMod;
           const myUid = this.uid;
           await runTransaction(ref(this.db, `rooms/${this.roomCode}/game`), (game) => {
-            if (!game || game.status !== 'playing') return game;
+            if (!game || game.status !== 'playing') return undefined;
             game.eliminated = game.eliminated || {};
             game.eliminated[myUid] = true;
             const active = game.turnOrder.filter((u) => !game.eliminated[u]);
@@ -346,7 +381,7 @@ export class MultiGame {
             }
             if (game.turnOrder[game.currentTurnIndex] === myUid) {
               game.currentTurnIndex = nextActiveIndex(game, game.currentTurnIndex);
-              game.turnDeadline = Date.now() + TURN_MS;
+              game.turnDeadline = this.now() + TURN_MS;
             }
             return game;
           });
