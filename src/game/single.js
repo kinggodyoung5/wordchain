@@ -1,8 +1,9 @@
-import { validateWord, pickStartWord, pickBotWord, getPoolsForDifficulty, Difficulty, lastChar, InvalidMessage } from './engine.js';
+import { validateWord, pickStartWord, pickBotWord, getPoolsForDifficulty, Difficulty, InvalidReason, lastChar, InvalidMessage } from './engine.js';
 import { renderChainChar } from './dueum.js';
 
 const BOT_THINK_MIN_MS = 700;
 const BOT_THINK_MAX_MS = 1600;
+const NOT_IN_DICTIONARY_PENALTY_MS = 2000;
 
 // 난이도별 턴 제한시간(ms). null이면 시간 제한 없음.
 const TURN_MS_BY_DIFFICULTY = {
@@ -122,7 +123,12 @@ export class SingleGame {
       profanitySet: this.profanitySet,
     });
     if (!result.ok) {
-      this.el.error.textContent = InvalidMessage[result.reason];
+      if (result.reason === InvalidReason.NOT_IN_DICTIONARY) {
+        this.el.error.textContent = `${InvalidMessage[result.reason]} (제한시간 -2초)`;
+        this.applyPenalty();
+      } else {
+        this.el.error.textContent = InvalidMessage[result.reason];
+      }
       return;
     }
     this.usedWords.add(word);
@@ -133,6 +139,28 @@ export class SingleGame {
     this.clearTimer();
     this.beginTurn('bot');
   };
+
+  /** 사전에 없는 단어를 입력했을 때의 페널티: 남은 시간 2초 차감 + 시각 효과. */
+  applyPenalty() {
+    if (!this.turnMs || !this.timerId) return; // 시간 제한 없는 난이도에서는 깎을 시간이 없음
+    this.deadline -= NOT_IN_DICTIONARY_PENALTY_MS;
+
+    const bar = this.el.timerFill.parentElement;
+    this.el.timerFill.classList.remove('penalty-flash');
+    void this.el.timerFill.offsetWidth; // 애니메이션 재시작을 위한 강제 리플로우
+    this.el.timerFill.classList.add('penalty-flash');
+    this.el.timerFill.addEventListener(
+      'animationend',
+      () => this.el.timerFill.classList.remove('penalty-flash'),
+      { once: true }
+    );
+
+    const badge = document.createElement('span');
+    badge.className = 'penalty-badge';
+    badge.textContent = '-2초';
+    bar.appendChild(badge);
+    setTimeout(() => badge.remove(), 900);
+  }
 
   startTimer(onTimeout) {
     this.clearTimer();

@@ -184,18 +184,41 @@ main {
 }
 
 .timer-bar {
+  position: relative;
   height: 6px;
   background: var(--bg-elevated);
   border-radius: 4px;
-  overflow: hidden;
 }
 .timer-fill {
   height: 100%;
   background: var(--primary);
   width: 100%;
+  border-radius: 4px;
   transition: width .2s linear, background-color .2s ease;
 }
 .timer-fill.low { background: var(--danger); }
+
+.timer-fill.penalty-flash { animation: penalty-flash-anim .4s ease; }
+@keyframes penalty-flash-anim {
+  0%, 100% { filter: none; }
+  40% { filter: brightness(1.7) saturate(1.4); }
+}
+
+.penalty-badge {
+  position: absolute;
+  right: 0;
+  top: -22px;
+  color: var(--danger);
+  font-weight: 700;
+  font-size: .8rem;
+  pointer-events: none;
+  animation: penalty-float .9s ease-out forwards;
+}
+@keyframes penalty-float {
+  0% { opacity: 0; transform: translateY(4px) scale(.9); }
+  15% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-16px) scale(1); }
+}
 
 .word-log {
   min-height: 140px;
