@@ -191,6 +191,6 @@ export class SingleGame {
     this.ended = true;
     this.clearTimer();
     this.el.input.disabled = true;
-    this.onEnd({ winner, reason });
+    this.onEnd({ winner, reason, words: [...this.usedWords] });
   }
 }

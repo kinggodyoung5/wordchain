@@ -232,6 +232,7 @@ export class MultiGame {
       this.callbacks.onGameEnded({
         iWon: g.winnerUid === this.uid,
         winnerNickname: winnerNick,
+        words: (g.log || []).map((entry) => entry.word),
       });
     }
     this.lastGameStatus = g.status;

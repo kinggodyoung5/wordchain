@@ -1,5 +1,6 @@
 import { loadDictionary } from './data/words.js';
 import { loadProfanitySet } from './data/profanity.js';
+import { lookupDefinition } from './data/dictionary.js';
 import { SingleGame } from './game/single.js';
 import { Difficulty } from './game/engine.js';
 import { MultiGame } from './game/multi.js';
@@ -20,6 +21,7 @@ const screens = {
   'multi-lobby': $('screen-multi-lobby'),
   'multi-room': $('screen-multi-room'),
   'multi-game': $('screen-multi-game'),
+  review: $('screen-review'),
 };
 let currentScreenName = 'menu';
 const history = [];
@@ -28,12 +30,12 @@ function showScreen(name, { push = true } = {}) {
   if (push && currentScreenName !== name) history.push(currentScreenName);
   Object.entries(screens).forEach(([key, el]) => el.classList.toggle('active', key === name));
   currentScreenName = name;
-  $('btn-back').classList.toggle('hidden', name === 'menu');
+  $('btn-back').classList.toggle('hidden', name === 'menu' || name === 'review');
 }
 
 function goBack() {
   const prev = history.pop() || 'menu';
-  if (currentScreenName === 'single' && singleGame) {
+  if ((currentScreenName === 'single' || currentScreenName === 'review') && singleGame) {
     singleGame.destroy();
     singleGame = null;
   }
@@ -105,7 +107,7 @@ function startSingle(difficulty = Difficulty.NORMAL) {
       log: $('single-word-log'),
       error: $('single-error'),
     },
-    onEnd: ({ winner, reason }) => {
+    onEnd: ({ winner, reason, words }) => {
       showResult({
         emoji: winner === 'me' ? '🎉' : '🤖',
         title: winner === 'me' ? '승리했습니다!' : '패배했습니다',
@@ -115,6 +117,7 @@ function startSingle(difficulty = Difficulty.NORMAL) {
             : reason === 'BOT_STUCK'
               ? '봇이 더 이상 이을 단어를 찾지 못했어요!'
               : '',
+        words,
         onClose: () => goBack(),
       });
     },
@@ -150,11 +153,12 @@ function ensureMultiGame() {
       currentScreen: () => currentScreenName,
       onRoomJoined: () => showScreen('multi-room'),
       onGameStarted: () => showScreen('multi-game'),
-      onGameEnded: ({ iWon, winnerNickname }) => {
+      onGameEnded: ({ iWon, winnerNickname, words }) => {
         showResult({
           emoji: iWon ? '🏆' : '💥',
           title: iWon ? '승리했습니다!' : '탈락했습니다',
           desc: !iWon && winnerNickname ? `${winnerNickname}님이 승리했습니다.` : '',
+          words,
           onClose: () => {
             multiGame.detachListeners();
             multiGame = null;
@@ -207,7 +211,7 @@ function handleFirebaseError(err) {
 }
 
 // ── 결과 모달 ─────────────────────────────────────────────────────────
-function showResult({ emoji, title, desc, onClose }) {
+function showResult({ emoji, title, desc, words, onClose }) {
   $('result-emoji').textContent = emoji;
   $('result-title').textContent = title;
   $('result-desc').textContent = desc || '';
@@ -215,9 +219,61 @@ function showResult({ emoji, title, desc, onClose }) {
   const handler = () => {
     $('modal-result').classList.add('hidden');
     $('btn-result-close').removeEventListener('click', handler);
-    onClose?.();
+    if (words && words.length > 0) {
+      showWordReview(words, onClose);
+    } else {
+      onClose?.();
+    }
   };
   $('btn-result-close').addEventListener('click', handler);
+}
+
+// ── 단어 복습 화면 ────────────────────────────────────────────────────
+function showWordReview(words, onDone) {
+  const listEl = $('review-word-list');
+  const defEl = $('review-definition');
+  listEl.innerHTML = '';
+  defEl.innerHTML = '<p class="review-placeholder">단어를 클릭하면 여기에 뜻이 나와요</p>';
+
+  words.forEach((word) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'review-word-btn';
+    btn.textContent = word;
+    btn.addEventListener('click', () => {
+      listEl.querySelectorAll('.review-word-btn.active').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      showDefinition(word, defEl);
+    });
+    listEl.appendChild(btn);
+  });
+
+  showScreen('review', { push: false });
+
+  const closeHandler = () => {
+    $('btn-review-close').removeEventListener('click', closeHandler);
+    onDone?.();
+  };
+  $('btn-review-close').addEventListener('click', closeHandler);
+}
+
+async function showDefinition(word, defEl) {
+  defEl.innerHTML = `<p class="def-loading">"${word}" 뜻을 찾는 중…</p>`;
+  const result = await lookupDefinition(word);
+  if (!result) {
+    defEl.innerHTML = `
+      <p class="def-word">${word}</p>
+      <p class="review-placeholder">뜻풀이를 찾지 못했어요.</p>
+      <span class="def-source"><a href="https://ko.wiktionary.org/wiki/${encodeURIComponent(word)}" target="_blank" rel="noopener">위키낱말사전에서 찾아보기 ↗</a></span>
+    `;
+    return;
+  }
+  const items = result.definitions.map((d) => `<li>${d}</li>`).join('');
+  defEl.innerHTML = `
+    <p class="def-word">${result.word}</p>
+    <ol class="def-list">${items}</ol>
+    <span class="def-source"><a href="https://ko.wiktionary.org/wiki/${encodeURIComponent(word)}" target="_blank" rel="noopener">한국어 위키낱말사전 ↗</a></span>
+  `;
 }
 
 // ── Firebase 설정 모달 ────────────────────────────────────────────────
