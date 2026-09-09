@@ -4,14 +4,20 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 <title>끝말잇기</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700;900&display=swap" />
 <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
 <div id="app">
+  <div class="scan-overlay" aria-hidden="true"></div>
   <header class="topbar">
-    <button id="btn-back" class="icon-btn hidden" aria-label="뒤로가기">←</button>
-    <h1 class="brand">🔤 끝말잇기</h1>
-    <button id="btn-settings" class="icon-btn" aria-label="Firebase 설정">⚙️</button>
+    <button id="btn-back" class="icon-btn hidden" aria-label="뒤로가기">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 18l-6-6 6-6"/></svg>
+    </button>
+    <h1 class="brand">끝말잇기</h1>
+    <button id="btn-settings" class="icon-btn" aria-label="Firebase 설정">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    </button>
   </header>
 
   <main>
@@ -19,13 +25,13 @@
     <section id="screen-menu" class="screen active">
       <p class="tagline">단어를 이어서 만들어봐요!</p>
       <div class="menu-grid">
-        <button class="mode-card" data-mode="single">
-          <span class="mode-icon">🤖</span>
+        <button class="mode-card glow-cyan" data-mode="single">
+          <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="3.4"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6"/></svg>
           <span class="mode-title">싱글 모드</span>
           <span class="mode-desc">봇과 1대1로 끝말잇기</span>
         </button>
-        <button class="mode-card" data-mode="multi">
-          <span class="mode-icon">👥</span>
+        <button class="mode-card glow-magenta" data-mode="multi">
+          <svg class="mode-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="3"/><circle cx="17" cy="9" r="2.6"/><path d="M3 20c0-3 2.3-5.2 5-5.2s5 2.2 5 5.2M14 20c.3-2.4 2-4 4.2-4s4 1.8 4.3 4"/></svg>
           <span class="mode-title">대결 모드</span>
           <span class="mode-desc">실시간 여러 명과 대결</span>
         </button>
@@ -38,27 +44,27 @@
       <p class="tagline">봇의 난이도를 골라주세요</p>
       <div class="menu-grid difficulty-grid">
         <button class="mode-card" data-difficulty="veryEasy">
-          <span class="mode-icon">🌷</span>
+          <span class="diff-tag">Lv1</span>
           <span class="mode-title">아주 쉬움</span>
           <span class="mode-desc">500단어 · 시간 제한 없음</span>
         </button>
         <button class="mode-card" data-difficulty="easy">
-          <span class="mode-icon">🌱</span>
+          <span class="diff-tag">Lv2</span>
           <span class="mode-title">쉬움</span>
           <span class="mode-desc">700단어 · 시간 제한 없음</span>
         </button>
-        <button class="mode-card" data-difficulty="normal">
-          <span class="mode-icon">⚖️</span>
+        <button class="mode-card glow-cyan" data-difficulty="normal">
+          <span class="diff-tag">Lv3</span>
           <span class="mode-title">보통</span>
           <span class="mode-desc">1,500단어 · 제한시간 30초</span>
         </button>
         <button class="mode-card" data-difficulty="hard">
-          <span class="mode-icon">🔥</span>
+          <span class="diff-tag">Lv4</span>
           <span class="mode-title">어려움</span>
           <span class="mode-desc">2,500단어 · 제한시간 20초</span>
         </button>
-        <button class="mode-card" data-difficulty="veryHard">
-          <span class="mode-icon">💀</span>
+        <button class="mode-card glow-magenta" data-difficulty="veryHard">
+          <span class="diff-tag magenta">Lv5</span>
           <span class="mode-title">매우 어려움</span>
           <span class="mode-desc">너가 과연 이길 수 있을까?</span>
         </button>
@@ -130,7 +136,7 @@
     <section id="screen-review" class="screen">
       <div class="review-panel">
         <h2 class="review-title">이번 게임에서 나온 단어</h2>
-        <p class="hint">단어를 눌러보면 뜻을 확인할 수 있어요.</p>
+        <p class="hint">단어를 눌러보면 뜻을 확인할 수 있어요. (위키낱말사전에 등록된 단어만 표시돼요)</p>
         <div class="review-words" id="review-word-list"></div>
         <div class="review-definition" id="review-definition">
           <p class="review-placeholder">단어를 클릭하면 여기에 뜻이 나와요</p>

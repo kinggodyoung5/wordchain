@@ -263,8 +263,8 @@ async function showDefinition(word, defEl) {
   if (!result) {
     defEl.innerHTML = `
       <p class="def-word">${word}</p>
-      <p class="review-placeholder">뜻풀이를 찾지 못했어요.</p>
-      <span class="def-source"><a href="https://ko.wiktionary.org/wiki/${encodeURIComponent(word)}" target="_blank" rel="noopener">위키낱말사전에서 찾아보기 ↗</a></span>
+      <p class="review-placeholder">이 단어는 위키낱말사전에 없어서 뜻을 못 보여드려요.<br>(표준국어대사전에는 실제로 있는 단어일 수 있어요 — 뜻풀이는 위키낱말사전에 등록된 단어만 표시됩니다)</p>
+      <span class="def-source"><a href="https://ko.wiktionary.org/wiki/${encodeURIComponent(word)}" target="_blank" rel="noopener">위키낱말사전에서 직접 찾아보기 ↗</a></span>
     `;
     return;
   }
