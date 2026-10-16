@@ -445,7 +445,8 @@ main {
   font-size: .8rem;
   resize: vertical;
 }
-.config-status { font-size: .8rem; color: var(--cyan); min-height: 1.2em; }
+.config-status { font-size: .8rem; color: var(--cyan); min-height: 1.2em; white-space: pre-line; line-height: 1.6; }
+.source-hint { margin-top: 4px; font-size: .75rem; }
 .modal-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
 
 .result-emoji { font-size: 2.4rem; text-align: center; margin: 0; filter: drop-shadow(0 0 10px rgba(0,234,255,.5)); }

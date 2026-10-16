@@ -37,7 +37,9 @@ export function clearLocalOverrideConfig() {
 
 export function getActiveFirebaseConfig() {
   const override = getLocalOverrideConfig();
-  if (override && override.databaseURL) {
+  // 브라우저에 남은 개인 설정은 공용 설정보다 우선하므로, 필수 값이 빠졌거나
+  // 자리표시자(YOUR_PROJECT_ID)가 섞인 깨진 값은 무시하고 공용 설정으로 간다.
+  if (override && validateConfigShape(override) === null && isConfigured(override)) {
     return { config: override, source: 'local' };
   }
   return { config: CENTRAL_FIREBASE_CONFIG, source: 'central' };

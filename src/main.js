@@ -1,6 +1,7 @@
 import { loadDictionary } from './data/words.js';
 import { loadProfanitySet } from './data/profanity.js';
 import { lookupDefinition } from './data/dictionary.js';
+import { describeFirebaseError, runDiagnostics } from './firebase/firebaseClient.js';
 import { SingleGame } from './game/single.js';
 import { Difficulty } from './game/engine.js';
 import { MultiGame } from './game/multi.js';
@@ -30,6 +31,7 @@ function showScreen(name, { push = true } = {}) {
   if (push && currentScreenName !== name) history.push(currentScreenName);
   Object.entries(screens).forEach(([key, el]) => el.classList.toggle('active', key === name));
   currentScreenName = name;
+  if (name === 'multi-lobby') updateSourceHint();
   $('btn-back').classList.toggle('hidden', name === 'menu' || name === 'review');
 }
 
@@ -202,12 +204,22 @@ $('btn-join-room').addEventListener('click', async () => {
 
 function handleFirebaseError(err) {
   if (err && err.code === 'NOT_CONFIGURED') {
-    $('multi-lobby-error').textContent = 'Firebase가 설정되지 않았습니다. 우측 상단 ⚙️ 에서 설정해주세요.';
+    $('multi-lobby-error').textContent = 'Firebase가 설정되지 않았습니다. 우측 상단 설정(톱니바퀴)에서 설정해주세요.';
     openFirebaseModal();
-  } else {
-    console.error(err);
-    $('multi-lobby-error').textContent = '연결에 실패했습니다. 잠시 후 다시 시도해주세요.';
+    return;
   }
+  console.error(err);
+  let msg = describeFirebaseError(err);
+  if (getActiveFirebaseConfig().source === 'local') {
+    msg += ' 지금은 이 브라우저에 저장된 개인 설정을 쓰는 중이에요 — 설정에서 "중앙 설정으로 초기화"를 눌러보세요.';
+  }
+  $('multi-lobby-error').textContent = msg;
+}
+
+function updateSourceHint() {
+  const { source } = getActiveFirebaseConfig();
+  $('multi-source-hint').textContent =
+    source === 'local' ? '연결: 이 브라우저의 개인 설정 (설정에서 초기화 가능)' : '연결: 공용 서버';
 }
 
 // ── 결과 모달 ─────────────────────────────────────────────────────────
@@ -310,6 +322,21 @@ $('btn-firebase-save').addEventListener('click', () => {
   setLocalOverrideConfig(parsed);
   $('firebase-config-status').textContent = '저장되었습니다! 페이지를 새로고침합니다…';
   setTimeout(() => location.reload(), 800);
+});
+
+$('btn-firebase-diagnose').addEventListener('click', async () => {
+  const status = $('firebase-config-status');
+  const btn = $('btn-firebase-diagnose');
+  btn.disabled = true;
+  status.textContent = '점검 중… (최대 20초)';
+  try {
+    const results = await runDiagnostics();
+    status.textContent = results
+      .map((r) => `[${r.ok ? 'OK' : '실패'}] ${r.step}${r.detail ? ' — ' + r.detail : ''}`)
+      .join('\n');
+  } finally {
+    btn.disabled = false;
+  }
 });
 
 $('btn-firebase-reset').addEventListener('click', () => {

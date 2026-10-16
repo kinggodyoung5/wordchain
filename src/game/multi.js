@@ -1,4 +1,4 @@
-import { getFirebase, getDbModule } from '../firebase/firebaseClient.js';
+import { getFirebase, getDbModule, withTimeout } from '../firebase/firebaseClient.js';
 import { validateWord, pickStartWord, lastChar, InvalidMessage } from './engine.js';
 import { renderChainChar } from './dueum.js';
 
@@ -71,22 +71,30 @@ export class MultiGame {
     for (let attempt = 0; attempt < 5; attempt++) {
       code = randomRoomCode();
       const { get } = this.dbMod;
-      const snap = await get(ref(this.db, `rooms/${code}/meta`));
+      const snap = await withTimeout(get(ref(this.db, `rooms/${code}/meta`)), 10000, '방 확인');
       if (!snap.exists()) break;
     }
     this.roomCode = code;
 
-    await set(ref(this.db, `rooms/${code}/meta`), {
-      hostUid: this.uid,
-      status: 'waiting',
-      createdAt: serverTimestamp(),
-    });
-    await set(ref(this.db, `rooms/${code}/players/${this.uid}`), {
-      nickname,
-      isHost: true,
-      connected: true,
-      joinedAt: serverTimestamp(),
-    });
+    await withTimeout(
+      set(ref(this.db, `rooms/${code}/meta`), {
+        hostUid: this.uid,
+        status: 'waiting',
+        createdAt: serverTimestamp(),
+      }),
+      10000,
+      '방 만들기'
+    );
+    await withTimeout(
+      set(ref(this.db, `rooms/${code}/players/${this.uid}`), {
+        nickname,
+        isHost: true,
+        connected: true,
+        joinedAt: serverTimestamp(),
+      }),
+      10000,
+      '방 만들기'
+    );
     onDisconnect(ref(this.db, `rooms/${code}/players/${this.uid}/connected`)).set(false);
 
     this.attachListeners();
@@ -97,7 +105,7 @@ export class MultiGame {
     await this.ensureFirebase();
     const { ref, get, set, serverTimestamp, onDisconnect } = this.dbMod;
     code = code.trim().toUpperCase();
-    const metaSnap = await get(ref(this.db, `rooms/${code}/meta`));
+    const metaSnap = await withTimeout(get(ref(this.db, `rooms/${code}/meta`)), 10000, '방 확인');
     if (!metaSnap.exists()) {
       throw new Error('방을 찾을 수 없습니다. 코드를 확인해주세요.');
     }
@@ -107,12 +115,16 @@ export class MultiGame {
     }
     this.nickname = nickname;
     this.roomCode = code;
-    await set(ref(this.db, `rooms/${code}/players/${this.uid}`), {
-      nickname,
-      isHost: false,
-      connected: true,
-      joinedAt: serverTimestamp(),
-    });
+    await withTimeout(
+      set(ref(this.db, `rooms/${code}/players/${this.uid}`), {
+        nickname,
+        isHost: false,
+        connected: true,
+        joinedAt: serverTimestamp(),
+      }),
+      10000,
+      '방 참가'
+    );
     onDisconnect(ref(this.db, `rooms/${code}/players/${this.uid}/connected`)).set(false);
 
     this.attachListeners();
