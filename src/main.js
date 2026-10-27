@@ -184,7 +184,8 @@ $('btn-create-room').addEventListener('click', async () => {
   try {
     await ensureMultiGame().createRoom(nickname);
   } catch (err) {
-    handleFirebaseError(err);
+    if (err && err.message && !err.code) $('multi-lobby-error').textContent = err.message;
+    else handleFirebaseError(err);
   }
 });
 

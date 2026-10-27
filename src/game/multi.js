@@ -3,14 +3,12 @@ import { validateWord, pickStartWord, lastChar, InvalidMessage } from './engine.
 import { renderChainChar } from './dueum.js';
 
 const TURN_MS = 20000;
-const ROOM_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // 혼동되는 0/O/1/I 제외
+const ROOM_CODE_LENGTH = 4;
+const ROOM_CODE_MAX_ATTEMPTS = 30;
 
-function randomRoomCode(len = 6) {
-  let code = '';
-  for (let i = 0; i < len; i++) {
-    code += ROOM_CODE_CHARS[Math.floor(Math.random() * ROOM_CODE_CHARS.length)];
-  }
-  return code;
+// 숫자 4자리(0000~9999). 앞자리 0도 문자열로 그대로 유지한다.
+function randomRoomCode() {
+  return String(Math.floor(Math.random() * 10 ** ROOM_CODE_LENGTH)).padStart(ROOM_CODE_LENGTH, '0');
 }
 
 export class MultiGame {
@@ -66,13 +64,17 @@ export class MultiGame {
     await this.ensureFirebase();
     const { ref, set, serverTimestamp, onDisconnect } = this.dbMod;
     this.nickname = nickname;
-    let code;
-    // 코드 충돌 방지를 위해 존재 여부 확인 후 생성 (드물게 재시도)
-    for (let attempt = 0; attempt < 5; attempt++) {
-      code = randomRoomCode();
+    let code = null;
+    // 4자리는 코드 공간이 작아 이미 쓰인 코드와 겹칠 수 있으므로, 빈 코드를 찾을 때까지 재시도한다.
+    // (방은 자동 삭제되지 않아 오래 쓰면 빈 코드가 줄어든다)
+    for (let attempt = 0; attempt < ROOM_CODE_MAX_ATTEMPTS && !code; attempt++) {
+      const candidate = randomRoomCode();
       const { get } = this.dbMod;
-      const snap = await withTimeout(get(ref(this.db, `rooms/${code}/meta`)), 10000, '방 확인');
-      if (!snap.exists()) break;
+      const snap = await withTimeout(get(ref(this.db, `rooms/${candidate}/meta`)), 10000, '방 확인');
+      if (!snap.exists()) code = candidate;
+    }
+    if (!code) {
+      throw new Error('빈 방 코드를 찾지 못했어요. 잠시 후 다시 시도해주세요.');
     }
     this.roomCode = code;
 
